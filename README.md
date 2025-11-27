@@ -13,7 +13,7 @@ astrbot_plugin_aicu_analysis/
 
 ```bash
 pip install "curl_cffi>=0.7.0" playwright jinja2
-playwright install chromium
+playwright install chromium```
 
 ✨ 
  * 获取B 站头像、等级、粉丝数、关注数及个性签名。
