@@ -1,0 +1,8 @@
+{
+    "cookie": {
+        "type": "string",
+        "description": "AICU 网站 Cookie (必须包含 ASession=...)",
+        "default": "",
+        "tip": "请在浏览器登录 aicu.cc 后按 F12 获取 Network 请求中的 Cookie"
+    }
+}
