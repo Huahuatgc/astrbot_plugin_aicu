@@ -87,12 +87,14 @@ class AicuAnalysisPlugin(Star):
                 await self._playwright.stop()
                 delattr(self, '_playwright')
     
-    def __del__(self):
-        """析构函数，确保浏览器实例被正确关闭"""
-        if self._browser:
-            # 注意：__del__中不能使用await，这里只是标记需要关闭
-            # 实际的关闭逻辑应在显式调用的方法中完成
-            logger.info("[AICU] 插件卸载，请确保已关闭浏览器实例")
+    async def on_plugin_load(self):
+        """插件加载时的初始化操作"""
+        logger.info("[AICU] 插件加载完成")
+    
+    async def on_plugin_unload(self):
+        """插件卸载时的资源清理操作"""
+        await self._close_browser()
+        logger.info("[AICU] 插件卸载，浏览器资源已清理")
 
     # ================= 1. 异步请求封装 (解决并发问题) =================
     async def _make_request(self, url: str, params: dict, cookie_override: str = None):
@@ -225,10 +227,19 @@ class AicuAnalysisPlugin(Star):
         return device_name, history_names
 
     def _parse_replies(self, reply_raw):
-        """解析评论列表并计算统计数据"""
+        """
+        解析评论列表并计算统计数据
+        
+        Args:
+            reply_raw: 从AICU API获取的评论原始数据
+            
+        Returns:
+            dict: 包含评论列表和统计数据的字典
+        """
         replies = []
         if reply_raw and reply_raw.get('code') == 0:
              data_block = reply_raw.get('data', {})
+             # 兼容 AICU API 可能返回的两种不同数据结构 (data.replies 或 data.data.replies)
              if 'replies' not in data_block and 'data' in reply_raw:
                  data_block = reply_raw.get('data', {}).get('data', {})
              replies = data_block.get('replies', []) or []
@@ -254,8 +265,10 @@ class AicuAnalysisPlugin(Star):
         hour_counts = Counter(hours)
         # 直接使用 most_common 的结果，保持按评论数量从高到低排序
         top_hours = dict(hour_counts.most_common(5))
-        max_hour_count = max(hour_counts.values()) if hour_counts else 1
-        active_hour = hour_counts.most_common(1)[0][0] if hour_counts else "N/A"
+        max_hour_count = max(hour_counts.values()) if hour_counts else 0  # 修正：无评论时应为0
+        # 修正：避免在hour_counts为空时调用most_common(1)[0]导致的IndexError
+        most_common_hour = hour_counts.most_common(1)
+        active_hour = most_common_hour[0][0] if most_common_hour else "N/A"
         avg_len = round(sum(lengths) / len(lengths), 1) if lengths else 0
 
         return {
